@@ -43,6 +43,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mmal/util/mmal_util_params.h"
 #include <iostream>
 #include <semaphore.h>
+
+#define VCOS_ALIGN_DOWN(p,n) (((ptrdiff_t)(p)) & ~((n)-1))
+#define VCOS_ALIGN_UP(p,n) VCOS_ALIGN_DOWN((ptrdiff_t)(p)+(n)-1,(n))
+
 using namespace std;
 namespace raspicam {
     namespace _private
@@ -57,6 +61,7 @@ namespace raspicam {
             unsigned int startingOffset;
             unsigned int offset;
             unsigned int length;
+            FILE *file_handle;                   /// File handle to write buffer data to.
         } RASPICAM_USERDATA;
 
         static void control_callback ( MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer ) {
@@ -74,24 +79,38 @@ namespace raspicam {
             } else {
                 unsigned int flags = buffer->flags;
                 mmal_buffer_header_mem_lock ( buffer );
-                for ( unsigned int i = 0; i < buffer->length; i++, userdata->bufferPosition++ ) {
-                    if ( userdata->offset >= userdata->length ) {
-                        cout << userdata->cameraBoard->API_NAME << ": Buffer provided was too small! Failed to copy data into buffer.\n";
-                        userdata->cameraBoard = NULL;
-                        break;
-                    } else {
-                        if ( userdata->cameraBoard->getEncoding() == RASPICAM_ENCODING_RGB ) {
-                            // Determines if the byte is an RGB value
-                            if ( userdata->bufferPosition >= 54 ) {
+                if (buffer->length && userdata->file_handle)
+                {
+                    int bytes_written = buffer->length;
+                    bytes_written = fwrite(buffer->data, 1, buffer->length, userdata->file_handle);
+                     // We need to check we wrote what we wanted - it's possible we have run out of storage.
+                    if (bytes_written != buffer->length)
+                    {
+                        cout << userdata->cameraBoard->API_NAME << "Unable to write buffer to file - aborting";
+                    }
+                }
+
+                else{
+                    for ( unsigned int i = 0; i < buffer->length; i++, userdata->bufferPosition++ ) {
+                        if ( userdata->offset >= userdata->length ) {
+                            cout << userdata->cameraBoard->API_NAME << ": Buffer provided was too small! Failed to copy data into buffer.\n";
+                            userdata->cameraBoard = NULL;
+                            break;
+                        } else {
+                            if ( userdata->cameraBoard->getEncoding() == RASPICAM_ENCODING_RGB ) {
+                                // Determines if the byte is an RGB value
+                                if ( userdata->bufferPosition >= 54 ) {
+                                    userdata->data[userdata->offset] = buffer->data[i];
+                                    userdata->offset++;
+                                }
+                            } else {
                                 userdata->data[userdata->offset] = buffer->data[i];
                                 userdata->offset++;
                             }
-                        } else {
-                            userdata->data[userdata->offset] = buffer->data[i];
-                            userdata->offset++;
                         }
                     }
                 }
+                
                 mmal_buffer_header_mem_unlock ( buffer );
                 unsigned int END_FLAG = 0;
                 END_FLAG |= MMAL_BUFFER_HEADER_FLAG_FRAME_END;
@@ -236,8 +255,8 @@ namespace raspicam {
                 height, // max_stills_h
                 0, // stills_yuv422
                 1, // one_shot_stills
-                width, // max_preview_video_w
-                height, // max_preview_video_h
+                1920, // max_preview_video_w
+                1080, // max_preview_video_h
                 3, // num_preview_video_frames
                 0, // stills_capture_circular_buffer_height
                 0, // fast_preview_resume
@@ -398,6 +417,7 @@ namespace raspicam {
             userdata->startingOffset = 0;
             userdata->length = length;
             userdata->imageCallback = NULL;
+            userdata->file_handle = NULL;
             encoder_output_port->userdata = ( struct MMAL_PORT_USERDATA_T * ) userdata;
             if ( ( ret = startCapture() ) != 0 ) {
                 delete userdata;
@@ -410,10 +430,109 @@ namespace raspicam {
 
             return true;
         }
+
+        bool Private_Impl_Still::takePicture ( const char* filename ) {
+
+            FILE *output_file = NULL;
+            output_file = fopen(filename, "wb");
+
+            if (!output_file)
+            {
+            // Notify user, carry on but discarding encoded output buffers
+                cout << API_NAME << "Error opening output file: "<< filename<< " No output file will be generated" << endl;
+                return false;
+            }
+
+            initialize();
+            int ret = 0;
+            sem_t mutex;
+            sem_init ( &mutex, 0, 0 );
+            RASPICAM_USERDATA * userdata = new RASPICAM_USERDATA();
+            userdata->cameraBoard = this;
+            userdata->encoderPool = encoder_pool;
+            userdata->mutex = &mutex;
+            userdata->data = 0;
+            userdata->bufferPosition = 0;
+            userdata->offset = 0;
+            userdata->startingOffset = 0;
+            userdata->length = 0;
+            userdata->imageCallback = NULL;
+            userdata->file_handle = output_file;
+            encoder_output_port->userdata = ( struct MMAL_PORT_USERDATA_T * ) userdata;
+            if ( ( ret = startCapture() ) != 0 ) {
+                delete userdata;
+                return false;
+            }
+            sem_wait ( &mutex );
+            sem_destroy ( &mutex );
+            stopCapture();
+            delete userdata;
+            fclose(output_file);
+
+            return true;
+        }
         
         size_t Private_Impl_Still::getImageBufferSize() const{
-	    return width*height*3+54 ;//oversize the buffer so to fit BMP images
+            if(encoding == raspicam::RASPICAM_ENCODING_BMP){
+                return width*height*3+54 ;//oversize the buffer so to fit BMP images
+            }
+	        return width*height*3+54 ;//oversize the buffer so to fit BMP images
         }
+
+      void Private_Impl_Still::get_sensor_defaults(int camera_num, char *camera_name, int *width, int *height )
+      {
+         MMAL_COMPONENT_T *camera_info;
+         MMAL_STATUS_T status;
+
+         // Default to the OV5647 setup
+         strncpy(camera_name, "OV5647", MMAL_PARAMETER_CAMERA_INFO_MAX_STR_LEN);
+
+         // Try to get the camera name and maximum supported resolution
+         status = mmal_component_create(MMAL_COMPONENT_DEFAULT_CAMERA_INFO, &camera_info);
+         if (status == MMAL_SUCCESS)
+         {
+            MMAL_PARAMETER_CAMERA_INFO_T param;
+            param.hdr.id = MMAL_PARAMETER_CAMERA_INFO;
+            param.hdr.size = sizeof(param)-4;  // Deliberately undersize to check firmware version
+            status = mmal_port_parameter_get(camera_info->control, &param.hdr);
+
+            if (status != MMAL_SUCCESS)
+            {
+               // Running on newer firmware
+               param.hdr.size = sizeof(param);
+               status = mmal_port_parameter_get(camera_info->control, &param.hdr);
+               if (status == MMAL_SUCCESS && param.num_cameras > camera_num)
+               {
+                  // Take the parameters from the first camera listed.
+                  if (*width == 0)
+                     *width = param.cameras[camera_num].max_width;
+                  if (*height == 0)
+                     *height = param.cameras[camera_num].max_height;
+                  strncpy(camera_name, param.cameras[camera_num].camera_name, MMAL_PARAMETER_CAMERA_INFO_MAX_STR_LEN);
+                  camera_name[MMAL_PARAMETER_CAMERA_INFO_MAX_STR_LEN-1] = 0;
+               }
+               else
+                  cout << API_NAME << "Cannot read camera info, keeping the defaults for OV5647" << endl;
+            }
+            else
+            {
+               // Older firmware
+               // Nothing to do here, keep the defaults for OV5647
+            }
+
+            mmal_component_destroy(camera_info);
+         }
+         else
+         {
+            cout << API_NAME << "Failed to create camera_info component" << endl;
+         }
+
+         // default to OV5647 if nothing detected..
+         if (*width == 0)
+            *width = 2592;
+         if (*height == 0)
+            *height = 1944;
+      }
 
         int Private_Impl_Still::startCapture ( imageTakenCallback userCallback, unsigned char * preallocated_data, unsigned int offset, unsigned int length ) {
             RASPICAM_USERDATA * userdata = new RASPICAM_USERDATA();

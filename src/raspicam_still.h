@@ -62,13 +62,16 @@ namespace raspicam {
         //Grabs and set the data into the data buffer which has the indicated length. It is your responsability
         // to alloc the buffer. You can use getImageBufferSize for that matter.
         bool grab_retrieve ( unsigned char * data, unsigned int length );
+
+        bool take_picture( const char* filename);
 	//Releases the camera
         void release();//not working
         // Returns the size of the images captured with the current parameters
         size_t getImageBufferSize() const;
 
-	
-	
+      
+        void get_sensor_defaults(int camera_num, char *camera_name, int *width, int *height );
+      
         void commitParameters();
         void setWidth ( unsigned int width );
         void setHeight ( unsigned int height );

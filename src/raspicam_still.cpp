@@ -51,8 +51,12 @@ namespace raspicam {
     }
     bool RaspiCam_Still::grab_retrieve ( unsigned char * preallocated_data, unsigned int length ) {
         return _impl->takePicture ( preallocated_data, length );
-
     }
+
+    bool RaspiCam_Still::take_picture ( const char* filename ) {
+        return _impl->takePicture ( filename );
+    }
+
     void RaspiCam_Still::release() {
         _impl->release();
     }
@@ -61,6 +65,12 @@ namespace raspicam {
         return      _impl-> getImageBufferSize();
 
     }
+
+    void RaspiCam_Still::get_sensor_defaults(int camera_num, char *camera_name, int *width, int *height )
+    {
+        return _impl->get_sensor_defaults(camera_num, camera_name, width, height);
+    }
+
     void RaspiCam_Still::commitParameters() {
         _impl-> commitParameters();
     }
