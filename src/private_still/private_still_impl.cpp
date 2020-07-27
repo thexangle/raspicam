@@ -44,9 +44,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 #include <semaphore.h>
 
-#define VCOS_ALIGN_DOWN(p, n) (((ptrdiff_t)(p)) & ~((n)-1))
-#define VCOS_ALIGN_UP(p, n) VCOS_ALIGN_DOWN((ptrdiff_t)(p) + (n)-1, (n))
-
 using namespace std;
 namespace raspicam
 {
@@ -260,6 +257,7 @@ namespace raspicam
             {
                 cout << API_NAME << ": fail to destroy encoder connection\n";
             }
+            encoder_connection = NULL;
         }
 
         int Private_Impl_Still::createCamera()
@@ -278,42 +276,6 @@ namespace raspicam
                 return -1;
             }
 
-            //Retrieve the camera info
-            int max_width = width;
-            int max_height = height;
-            int max_preview_video_w = width;
-            int max_preview_video_h = height;
-            
-            MMAL_PARAMETER_CAMERA_INFO_T param;
-            param.hdr.id = MMAL_PARAMETER_CAMERA_INFO;
-            param.hdr.size = sizeof(param) - 4; // Deliberately undersize to check firmware version
-            MMAL_STATUS_T status;
-            status = mmal_port_parameter_get(camera->control, &param.hdr);
-
-            if (status != MMAL_SUCCESS)
-            {
-                // Running on newer firmware
-                param.hdr.size = sizeof(param);
-                status = mmal_port_parameter_get(camera->control, &param.hdr);
-                if (status == MMAL_SUCCESS && param.num_cameras > 0)
-                {
-                    // Take the parameters from the first camera listed.
-                    max_width = param.cameras[0].max_width;
-                    max_height = param.cameras[0].max_height;
-                }
-                else
-                {
-                    cout << API_NAME << "Cannot read camera info, keeping the defaults for OV5647" << endl;
-                }
-            }
-            else
-            {
-                // Older firmware
-                // Nothing to do here, keep the defaults for OV5647
-            }
-
-            camera_still_port = camera->output[MMAL_CAMERA_CAPTURE_PORT];
-
             // Enable the camera, and tell it its control callback function
             if (mmal_port_enable(camera->control, control_callback))
             {
@@ -322,8 +284,9 @@ namespace raspicam
                 return -1;
             }
 
-            if (width <= 0 ) { width = max_width; }
-            if (height <= 0) { height = max_height; }
+            camera_still_port = camera->output[MMAL_CAMERA_CAPTURE_PORT];
+            preview_port = camera->output[MMAL_CAMERA_CAPTURE_PORT];
+
             MMAL_PARAMETER_CAMERA_CONFIG_T camConfig = {
                 {MMAL_PARAMETER_CAMERA_CONFIG, sizeof(camConfig)},
                 width,                              // max_stills_w
@@ -341,23 +304,82 @@ namespace raspicam
                 cout << API_NAME << ": Could not set port parameters.\n";
 
             commitParameters();
+            
+            /************************************************/
+            /*               SETUP preview port               */
+            /************************************************/
+            // Now set up the port formats
+            MMAL_ES_FORMAT_T *format = preview_port->format;
+            format->encoding = MMAL_ENCODING_OPAQUE;
+            format->encoding_variant = MMAL_ENCODING_I420;
 
             if(shutter_speed > 6000000)
             {
                 MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},
                     { 5, 1000 }, {166, 1000}
                 };
-                mmal_port_parameter_set(camera_still_port, &fps_range.hdr);
+                mmal_port_parameter_set(preview_port, &fps_range.hdr);
             }
             else if(shutter_speed > 1000000)
             {
                 MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},
-                    { 167, 1000 }, {999, 1000}
+                    { 166, 1000 }, {999, 1000}
                 };
+                mmal_port_parameter_set(preview_port, &fps_range.hdr);
+            }
+            // Use a full FOV 4:3 mode
+            format->es->video.width = 1024;
+            format->es->video.height = 768;
+            format->es->video.crop.x = 0;
+            format->es->video.crop.y = 0;
+            format->es->video.crop.width = 1024;
+            format->es->video.crop.height = 768;
+            format->es->video.frame_rate.num = 0;
+            format->es->video.frame_rate.den = 1;
+
+            MMAL_STATUS_T status = mmal_port_format_commit(preview_port);
+            if (status != MMAL_SUCCESS)
+            {
+                cout << API_NAME << "camera preview format couldn't be set" << endl;
+            }
+
+            /************************************************/
+            /*               SETUP video port (todo)        */
+            /************************************************/
+
+            // Set the same format on the video  port (which we don't use here)
+            //mmal_format_full_copy(video_port->format, format);
+            //status = mmal_port_format_commit(video_port);
+
+            // if (status  != MMAL_SUCCESS)
+            // {
+            //     vcos_log_error("camera video format couldn't be set");
+            //     goto error;
+            // }
+
+            // Ensure there are enough buffers to avoid dropping frames
+            // if (video_port->buffer_num < VIDEO_OUTPUT_BUFFERS_NUM)
+            //     video_port->buffer_num = VIDEO_OUTPUT_BUFFERS_NUM;
+
+            /************************************************/
+            /*               SETUP Still port               */
+            /************************************************/
+            if (shutter_speed > 6000000)
+            {
+                MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},
+                                                        {5, 1000},
+                                                        {166, 1000}};
+                mmal_port_parameter_set(camera_still_port, &fps_range.hdr);
+            }
+            else if (shutter_speed > 1000000)
+            {
+                MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},
+                                                        {167, 1000},
+                                                        {999, 1000}};
                 mmal_port_parameter_set(camera_still_port, &fps_range.hdr);
             }
 
-            MMAL_ES_FORMAT_T *format = camera_still_port->format;
+            format = camera_still_port->format;
             format->encoding = MMAL_ENCODING_OPAQUE;
             format->es->video.width = width;
             format->es->video.height = height;
@@ -399,6 +421,78 @@ namespace raspicam
             return 0;
         }
 
+        int Private_Impl_Still::createPreview()
+        {
+            MMAL_COMPONENT_T *preview = 0;
+            MMAL_PORT_T *preview_port = NULL;
+            MMAL_STATUS_T status;
+
+            status = mmal_component_create(MMAL_COMPONENT_DEFAULT_VIDEO_RENDERER,
+                                            &preview);
+
+            if (status != MMAL_SUCCESS)
+            {
+                cout << API_NAME << "Unable to create preview component" << endl;
+                goto error;
+            }
+
+            if (!preview->input_num)
+            {
+                status = MMAL_ENOSYS;
+                cout << API_NAME <<  "No input ports found on component" << endl;
+                goto error;
+            }
+
+            preview_port = preview->input[0];
+
+            MMAL_DISPLAYREGION_T param;
+            param.hdr.id = MMAL_PARAMETER_DISPLAYREGION;
+            param.hdr.size = sizeof(MMAL_DISPLAYREGION_T);
+
+            param.set = MMAL_DISPLAY_SET_LAYER;
+            param.layer = 2; // PREVIEW_LAYER;
+
+            param.set |= MMAL_DISPLAY_SET_ALPHA;
+            param.alpha = 255;
+
+            MMAL_RECT_T previewWindow;
+            previewWindow.x = 0;
+            previewWindow.y = 0;
+            previewWindow.width = 1024;
+            previewWindow.height = 768;
+
+            param.set |= (MMAL_DISPLAY_SET_DEST_RECT | MMAL_DISPLAY_SET_FULLSCREEN);
+            param.fullscreen = 0;
+            param.dest_rect = previewWindow;
+
+            status = mmal_port_parameter_set(preview_port, &param.hdr);
+
+            if (status != MMAL_SUCCESS && status != MMAL_ENOSYS)
+            {
+                cout << API_NAME <<  "unable to set preview port parameters : " <<  status << endl;
+                goto error;
+            }
+
+            /* Enable component */
+            status = mmal_component_enable(preview);
+
+            if (status != MMAL_SUCCESS)
+            {
+                cout << API_NAME << "Unable to enable preview/null sink component " << status << endl;
+                goto error;
+            }
+
+            preview_component = preview;
+            return 0;
+
+        error:
+
+            if (preview)
+                mmal_component_destroy(preview);
+
+            return -1;
+        }
+
         int Private_Impl_Still::createEncoder()
         {
             if (mmal_component_create(MMAL_COMPONENT_DEFAULT_IMAGE_ENCODER, &encoder))
@@ -423,7 +517,7 @@ namespace raspicam
             encoder_output_port->buffer_size = encoder_output_port->buffer_size_recommended;
             if (encoder_output_port->buffer_size < encoder_output_port->buffer_size_min)
                 encoder_output_port->buffer_size = encoder_output_port->buffer_size_min;
-                
+
             encoder_output_port->buffer_num = encoder_output_port->buffer_num_recommended;
             if (encoder_output_port->buffer_num < encoder_output_port->buffer_num_min)
                 encoder_output_port->buffer_num = encoder_output_port->buffer_num_min;
@@ -435,9 +529,9 @@ namespace raspicam
                 return -1;
             }
 
-            
             // Set the JPEG quality level
-            if(mmal_port_parameter_set_uint32(encoder_output_port, MMAL_PARAMETER_JPEG_Q_FACTOR, quality)  != MMAL_SUCCESS){
+            if (mmal_port_parameter_set_uint32(encoder_output_port, MMAL_PARAMETER_JPEG_Q_FACTOR, quality) != MMAL_SUCCESS)
+            {
                 cout << API_NAME << ": Could not set jpeg quality.\n";
             }
 
@@ -462,6 +556,8 @@ namespace raspicam
             {
                 mmal_component_destroy(camera);
                 camera = NULL;
+                camera_still_port = NULL;
+                preview_port = NULL;
             }
         }
 
@@ -470,11 +566,14 @@ namespace raspicam
             if (encoder_pool)
             {
                 mmal_port_pool_destroy(encoder->output[0], encoder_pool);
+                encoder_pool = NULL;
             }
             if (encoder)
             {
                 mmal_component_destroy(encoder);
                 encoder = NULL;
+                encoder_output_port = NULL;
+                encoder_input_port = NULL;
             }
         }
 
@@ -488,22 +587,27 @@ namespace raspicam
                 destroyCamera();
                 return -1;
             }
-            else if (createEncoder())
+            // if (createPreview())
+            // {
+            //     cout << API_NAME << ": Failed to create preview component.\n";
+            //     destroyCamera();
+            //     return -1;
+            // }
+            if (createEncoder())
             {
                 cout << API_NAME << ": Failed to create encoder component.\n";
                 destroyCamera();
                 return -1;
             }
-            else
+            camera_still_port = camera->output[MMAL_CAMERA_CAPTURE_PORT];
+            encoder_input_port = encoder->input[0];
+            encoder_output_port = encoder->output[0];
+            preview_port = camera->output[MMAL_CAMERA_PREVIEW_PORT];
+
+            if (connectPorts(camera_still_port, encoder_input_port, &encoder_connection) != MMAL_SUCCESS)
             {
-                camera_still_port = camera->output[MMAL_CAMERA_CAPTURE_PORT];
-                encoder_input_port = encoder->input[0];
-                encoder_output_port = encoder->output[0];
-                if (connectPorts(camera_still_port, encoder_input_port, &encoder_connection) != MMAL_SUCCESS)
-                {
-                    cout << "ERROR: Could not connect encoder ports!\n";
-                    return -1;
-                }
+                cout << "ERROR: Could not connect encoder ports!\n";
+                return -1;
             }
             _isInitialized = true;
             return 0;
@@ -514,9 +618,22 @@ namespace raspicam
             if (!_isInitialized)
                 return;
 
+
+            if (encoder_output_port && encoder_output_port->is_enabled)
+                mmal_port_disable(encoder_output_port);
+                
             disconnectPorts();
 
-            // camera and encoder are not disabled here because it cause destroy function to not do its job properly
+            /* Disable components */
+            if (encoder)
+                mmal_component_disable(encoder);
+
+            if (preview_component)
+                mmal_component_disable(preview_component);
+
+            if (camera)
+                mmal_component_disable(camera);
+
 
             destroyEncoder();
             destroyCamera();
@@ -594,6 +711,54 @@ namespace raspicam
             stopCapture();
             delete userdata;
             fclose(output_file);
+
+            return true;
+        }
+
+        bool Private_Impl_Still::takePictureInMem(char ** dynamically_allocated_data, size_t* output_size)
+        {
+
+            if(!dynamically_allocated_data || !output_size){
+                return false;
+            }
+            //open memory stream
+            FILE *memfp = open_memstream(dynamically_allocated_data, output_size);
+
+
+            if (!memfp)
+            {
+                // Notify user, carry on but discarding encoded output buffers
+                cout << API_NAME << "Error opening memory stream for capture" << endl;
+                *output_size = 0;
+                return false;
+            }
+
+            initialize();
+            int ret = 0;
+            sem_t mutex;
+            sem_init(&mutex, 0, 0);
+            RASPICAM_USERDATA *userdata = new RASPICAM_USERDATA();
+            userdata->cameraBoard = this;
+            userdata->encoderPool = encoder_pool;
+            userdata->mutex = &mutex;
+            userdata->data = 0;
+            userdata->bufferPosition = 0;
+            userdata->offset = 0;
+            userdata->startingOffset = 0;
+            userdata->length = 0;
+            userdata->imageCallback = NULL;
+            userdata->file_handle = memfp;
+            encoder_output_port->userdata = (struct MMAL_PORT_USERDATA_T *)userdata;
+            if ((ret = startCapture()) != 0)
+            {
+                delete userdata;
+                return false;
+            }
+            sem_wait(&mutex);
+            sem_destroy(&mutex);
+            stopCapture();
+            delete userdata;
+            fclose(memfp);
 
             return true;
         }

@@ -63,8 +63,14 @@ namespace raspicam {
         // to alloc the buffer. You can use getImageBufferSize for that matter.
         bool grab_retrieve ( unsigned char * data, unsigned int length );
 
+       //Grabs and write the data into the file with the path provided
         bool take_picture( const char* filename);
-	//Releases the camera
+
+        //Dynamically allocate a buffer to store the capture and return the buffer start address + size
+        // It is your responsability to free the dynamically allocated buffer after use. 
+        bool takePictureInMem(char ** dynamically_allocated_data, size_t* output_size );
+
+	     //Releases the camera
         void release();//not working
         // Returns the size of the images captured with the current parameters
         size_t getImageBufferSize() const;

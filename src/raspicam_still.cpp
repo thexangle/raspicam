@@ -56,7 +56,9 @@ namespace raspicam {
     bool RaspiCam_Still::take_picture ( const char* filename ) {
         return _impl->takePicture ( filename );
     }
-
+    bool RaspiCam_Still::takePictureInMem(char ** dynamically_allocated_data, size_t* output_size ){
+        return _impl->takePictureInMem ( dynamically_allocated_data, output_size );
+    }
     void RaspiCam_Still::release() {
         _impl->release();
     }
