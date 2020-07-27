@@ -78,6 +78,7 @@ namespace raspicam {
         void setCaptureSize ( unsigned int width, unsigned int height );
         void setBrightness ( unsigned int brightness );
         void setQuality ( unsigned int quality );
+        void setShutterSpeed ( unsigned int shutter_spped );
         void setRotation ( int rotation );
         void setISO ( int iso );
         void setSharpness ( int sharpness );

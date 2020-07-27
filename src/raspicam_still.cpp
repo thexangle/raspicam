@@ -89,6 +89,9 @@ namespace raspicam {
     void RaspiCam_Still::setQuality ( unsigned int quality ) {
         _impl->setQuality ( quality );
     }
+    void RaspiCam_Still::setShutterSpeed ( unsigned int shutter_speed ) {
+        _impl->setShutterSpeed ( shutter_speed );
+    }
     void RaspiCam_Still::setRotation ( int rotation ) {
         _impl-> setRotation ( rotation );
     }

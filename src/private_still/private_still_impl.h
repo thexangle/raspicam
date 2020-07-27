@@ -42,7 +42,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mmal/util/mmal_connection.h"
 #include <string>
 #define MMAL_CAMERA_CAPTURE_PORT 2
-#define STILLS_FRAME_RATE_NUM 3
+// Stills format information
+// 0 implies variable
+#define STILLS_FRAME_RATE_NUM 0
 #define STILLS_FRAME_RATE_DEN 1
 namespace raspicam {
     namespace _private
@@ -65,6 +67,7 @@ namespace raspicam {
             unsigned int rotation; // 0 to 359
             unsigned int brightness; // 0 to 100
             unsigned int quality; // 0 to 100
+            unsigned int shutter_speed; //in microseconds
             int iso;
             int sharpness; // -100 to 100
             int contrast; // -100 to 100
@@ -85,6 +88,7 @@ namespace raspicam {
             MMAL_PARAM_IMAGEFX_T convertImageEffect ( RASPICAM_IMAGE_EFFECT imageEffect );
             void commitBrightness();
             void commitQuality();
+            void commitShutterSpeed();
             void commitRotation();
             void commitISO();
             void commitSharpness();
@@ -135,6 +139,7 @@ namespace raspicam {
             void setCaptureSize ( unsigned int width, unsigned int height );
             void setBrightness ( unsigned int brightness );
             void setQuality ( unsigned int quality );
+            void setShutterSpeed( unsigned int ss);
             void setRotation ( int rotation );
             void setISO ( int iso );
             void setSharpness ( int sharpness );
@@ -153,6 +158,7 @@ namespace raspicam {
             unsigned int getBrightness();
             unsigned int getRotation();
             unsigned int getQuality();
+            unsigned int getShutterSpeed(); 
             int getISO();
             int getSharpness();
             int getContrast();
