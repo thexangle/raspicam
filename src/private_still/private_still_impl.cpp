@@ -1183,6 +1183,17 @@ namespace raspicam
             return verticalFlip;
         }
 
+
+        float Private_Impl_Still::getAnalogGain()
+        {
+            return analogGain;
+        }
+
+        float Private_Impl_Still::getDigitalGain()
+        {
+            return digitalGain;
+        }
+
         void Private_Impl_Still::commitBrightness()
         {
             mmal_port_parameter_set_rational(camera->control, MMAL_PARAMETER_BRIGHTNESS, (MMAL_RATIONAL_T){brightness, 100});
@@ -1343,7 +1354,7 @@ namespace raspicam
             MMAL_STATUS_T status;
 
             if (!camera)
-                return 1;
+                return ;
 
             rational.num = (unsigned int)(analogGain * 65536);
             status = mmal_port_parameter_set_rational(camera->control, MMAL_PARAMETER_ANALOG_GAIN, rational);
