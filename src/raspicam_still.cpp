@@ -56,9 +56,10 @@ namespace raspicam {
     bool RaspiCam_Still::take_picture ( const char* filename ) {
         return _impl->takePicture ( filename );
     }
-    bool RaspiCam_Still::takePictureInMem(char ** dynamically_allocated_data, size_t* output_size ){
-        return _impl->takePictureInMem ( dynamically_allocated_data, output_size );
+    bool RaspiCam_Still::take_picture_in_mem(char ** dynamically_allocated_data, size_t* output_size ){
+        return _impl->take_picture_in_mem ( dynamically_allocated_data, output_size );
     }
+
     void RaspiCam_Still::release() {
         _impl->release();
     }
@@ -75,6 +76,9 @@ namespace raspicam {
 
     void RaspiCam_Still::commitParameters() {
         _impl-> commitParameters();
+    }
+    void RaspiCam_Still::setBurstMode ( bool burst ) {
+        _impl-> setBurstMode ( burst );
     }
     void RaspiCam_Still::setWidth ( unsigned int width ) {
         _impl-> setWidth ( width );
@@ -131,6 +135,16 @@ namespace raspicam {
         _impl->setVerticalFlip ( vFlip );
     }
 
+    void RaspiCam_Still::setAnalogGain ( float gain ) {
+        _impl->setAnalogGain ( gain );
+    }
+     void RaspiCam_Still::setDigitalGain ( float gain ) {
+        _impl->setDigitalGain ( gain );
+    }
+
+    bool RaspiCam_Still::getBurstMode() {
+        return _impl->getBurstMode();
+    }
     unsigned int RaspiCam_Still::getWidth() {
         return _impl->getWidth();
     }
@@ -178,6 +192,14 @@ namespace raspicam {
     }
     bool RaspiCam_Still::isVerticallyFlipped() {
         return _impl->isVerticallyFlipped();
+    }
+
+    float RaspiCam_Still::getAnalogGain() {
+        return _impl->getAnalogGain();
+    }
+
+    float RaspiCam_Still::getDigitalGain() {
+        return _impl->getDigitalGain();
     }
 }
 

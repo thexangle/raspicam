@@ -68,7 +68,7 @@ namespace raspicam {
 
         //Dynamically allocate a buffer to store the capture and return the buffer start address + size
         // It is your responsability to free the dynamically allocated buffer after use. 
-        bool takePictureInMem(char ** dynamically_allocated_data, size_t* output_size );
+        bool take_picture_in_mem(char ** dynamically_allocated_data, size_t* output_size );
 
 	     //Releases the camera
         void release();//not working
@@ -79,6 +79,7 @@ namespace raspicam {
         void get_sensor_defaults(int camera_num, char *camera_name, int *width, int *height );
       
         void commitParameters();
+        void setBurstMode(bool burst);
         void setWidth ( unsigned int width );
         void setHeight ( unsigned int height );
         void setCaptureSize ( unsigned int width, unsigned int height );
@@ -97,7 +98,10 @@ namespace raspicam {
         void setMetering ( RASPICAM_METERING metering );
         void setHorizontalFlip ( bool hFlip );
         void setVerticalFlip ( bool vFlip );
+        void setAnalogGain( float gain );
+        void setDigitalGain( float gain );
 
+        bool getBurstMode();
         unsigned int getWidth();
         unsigned int getHeight();
         unsigned int getBrightness();
@@ -114,6 +118,8 @@ namespace raspicam {
         RASPICAM_METERING getMetering();
         bool isHorizontallyFlipped();
         bool isVerticallyFlipped();
+        float getDigitalGain();
+        float getAnalogGain();
 
     };
 }

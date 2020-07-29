@@ -71,6 +71,7 @@ namespace raspicam {
             unsigned int brightness; // 0 to 100
             unsigned int quality; // 0 to 100
             unsigned int shutter_speed; //in microseconds
+            bool burst_mode;
             int iso;
             int sharpness; // -100 to 100
             int contrast; // -100 to 100
@@ -81,8 +82,11 @@ namespace raspicam {
             RASPICAM_IMAGE_EFFECT imageEffect;
             RASPICAM_METERING metering;
             bool changedSettings;
+            bool changedResolution;
             bool horizontalFlip;
             bool verticalFlip;
+            float analogGain;
+            float digitalGain;
 
             MMAL_FOURCC_T convertEncoding ( RASPICAM_ENCODING encoding );
             MMAL_PARAM_EXPOSUREMETERINGMODE_T convertMetering ( RASPICAM_METERING metering );
@@ -102,12 +106,19 @@ namespace raspicam {
             void commitImageEffect();
             void commitMetering();
             void commitFlips();
+            void commitResolution();
+            void commitGains();
             int startCapture();
+            int startPreviewCapture();
             int createCamera();
             int createPreview();
-            int createEncoder();
+            int createEncoders();
+            
+            int disableCamera();
+            int enableCamera();
+
             void destroyCamera();
-            void destroyEncoder();
+            void destroyEncoders();
             void setDefaults();
             MMAL_STATUS_T connectPorts ( MMAL_PORT_T *output_port, MMAL_PORT_T *input_port, MMAL_CONNECTION_T **connection );
             void disconnectPorts();
@@ -131,16 +142,17 @@ namespace raspicam {
             }
             int initialize();
             int startCapture ( imageTakenCallback userCallback, unsigned char * preallocated_data, unsigned int offset, unsigned int length );
-            void stopCapture();
+            void stopCapture(MMAL_PORT_T * port);
             bool takePicture ( unsigned char * preallocated_data, unsigned int length );
             bool takePicture ( const char * filename );
-            bool takePictureInMem(char ** dynamically_allocated_data, size_t* output_size );
+            bool take_picture_in_mem(char ** dynamically_allocated_data, size_t* output_size );;
             void release();
 	    
 	         size_t getImageBufferSize() const;
             void get_sensor_defaults(int camera_num, char *camera_name, int *width, int *height );
             void bufferCallback ( MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer );
             void commitParameters();
+            void setBurstMode(bool mode);
             void setWidth ( unsigned int width );
             void setHeight ( unsigned int height );
             void setCaptureSize ( unsigned int width, unsigned int height );
@@ -159,7 +171,10 @@ namespace raspicam {
             void setMetering ( RASPICAM_METERING metering );
             void setHorizontalFlip ( bool hFlip );
             void setVerticalFlip ( bool vFlip );
+            void setAnalogGain( float gain );
+            void setDigitalGain( float gain );
 
+            bool getBurstMode();
             unsigned int getWidth();
             unsigned int getHeight();
             unsigned int getBrightness();
@@ -177,6 +192,8 @@ namespace raspicam {
             RASPICAM_METERING getMetering();
             bool isHorizontallyFlipped();
             bool isVerticallyFlipped();
+            float getDigitalGain();
+            float getAnalogGain();
 
 
             //Returns an id of the camera. We assume the camera id is the one of the raspberry
