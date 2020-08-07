@@ -42,6 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mmal/util/mmal_connection.h"
 #include <string>
 #define MMAL_CAMERA_CAPTURE_PORT 2
+#define MMAL_CAMERA_VIDEO_PORT 1
 #define MMAL_CAMERA_PREVIEW_PORT 0
 // Stills format information
 // 0 implies variable
@@ -60,9 +61,12 @@ namespace raspicam {
             MMAL_COMPONENT_T * encoder;	/// Pointer to the encoder component
             MMAL_COMPONENT_T * preview_component;   /// Pointer to the preview component
             MMAL_CONNECTION_T * encoder_connection; // Connection from the camera to the encoder
+            MMAL_CONNECTION_T * preview_connection; // Connection from the camera to the encoder
             MMAL_POOL_T * encoder_pool;				  /// Pointer to the pool of buffers used by encoder output port
             MMAL_PORT_T * camera_still_port;
             MMAL_PORT_T * preview_port;
+            MMAL_PORT_T * video_port;
+            MMAL_PORT_T * preview_input_port;
             MMAL_PORT_T * encoder_input_port;
             MMAL_PORT_T * encoder_output_port;
             unsigned int width;
@@ -133,9 +137,12 @@ namespace raspicam {
                 encoder = NULL;
                 preview_component = NULL;
                 encoder_connection = NULL;
+                preview_connection = NULL;
                 encoder_pool = NULL;
                 camera_still_port = NULL;
                 preview_port = NULL;
+                video_port = NULL;
+                preview_input_port = NULL;
                 encoder_input_port = NULL;
                 encoder_output_port = NULL;
 		_isInitialized=false;

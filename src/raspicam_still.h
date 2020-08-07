@@ -107,6 +107,7 @@ namespace raspicam {
         unsigned int getBrightness();
         unsigned int getRotation();
         unsigned int getQuality();
+        unsigned int getShutterSpeed();
         int getISO();
         int getSharpness();
         int getContrast();

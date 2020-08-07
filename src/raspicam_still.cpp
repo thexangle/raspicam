@@ -160,6 +160,9 @@ namespace raspicam {
     unsigned int RaspiCam_Still::getQuality() {
         return _impl->getQuality();
     }
+    unsigned int RaspiCam_Still::getShutterSpeed() {
+        return _impl->getShutterSpeed();
+    }
     int RaspiCam_Still::getISO() {
         return _impl->getISO();
     }
