@@ -65,8 +65,11 @@ namespace raspicam
 
         static void control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
         {
-            cout << "control_callback" << endl;
-            if (buffer->cmd == MMAL_EVENT_PARAMETER_CHANGED)
+            Private_Impl_Still *cameraBoard = NULL;
+            if(port->userdata){
+                cameraBoard = (Private_Impl_Still *)port->userdata;
+            }
+            if (buffer->cmd == MMAL_EVENT_PARAMETER_CHANGED && cameraBoard)
             {
                 MMAL_EVENT_PARAMETER_CHANGED_T *param = (MMAL_EVENT_PARAMETER_CHANGED_T *)buffer->data;
                 switch (param->hdr.id)
@@ -74,6 +77,9 @@ namespace raspicam
                     case MMAL_PARAMETER_CAMERA_SETTINGS:
                     {
                         MMAL_PARAMETER_CAMERA_SETTINGS_T *settings = (MMAL_PARAMETER_CAMERA_SETTINGS_T*)param;
+                        cameraBoard->updateSettings(settings);
+                       
+
                         // printf("Exposure now %u, analog gain %u/%u, digital gain %u/%u\n",
                         //                 settings->exposure,
                         //                 settings->analog_gain.num, settings->analog_gain.den,
@@ -166,6 +172,17 @@ namespace raspicam
                 MMAL_BUFFER_HEADER_T *new_buffer = mmal_queue_get(userdata->encoderPool->queue);
                 if (new_buffer)
                     mmal_port_send_buffer(port, new_buffer);
+            }
+        }
+
+        void Private_Impl_Still::updateSettings(MMAL_PARAMETER_CAMERA_SETTINGS_T* settings)
+        {
+            if(settings){
+                shutter_speed = settings->exposure;
+                analogGain = (float)settings->analog_gain.num / (float)(settings->analog_gain.den ? settings->analog_gain.den: 1.0f);
+                digitalGain = (float)settings->digital_gain.num / (float)(settings->digital_gain.den ? settings->digital_gain.den: 1.0f);
+                awbRedGain = (float)settings->awb_red_gain.num / (float)(settings->awb_red_gain.den ? settings->awb_red_gain.den: 1.0f);
+                awbBlueGain = (float)settings->awb_blue_gain.num / (float)(settings->awb_blue_gain.den ? settings->awb_blue_gain.den: 1.0f);
             }
         }
 
@@ -337,6 +354,7 @@ namespace raspicam
                 return -1;
             }
             // Enable the camera, and tell it its control callback function
+             camera->control->userdata = (struct MMAL_PORT_USERDATA_T *)this;
             if (mmal_port_enable(camera->control, control_callback))
             {
                 cout << API_NAME << ": Could not enable control port.\n";
@@ -653,6 +671,7 @@ namespace raspicam
         {
             if (camera)
             {
+                camera->control->userdata = NULL;
                 mmal_component_destroy(camera);
                 camera = NULL;
                 camera_still_port = NULL;
@@ -1194,6 +1213,17 @@ namespace raspicam
             changedSettings = true;
         }
 
+        void Private_Impl_Still::setAwbRedGain(float gain)
+        {
+            awbRedGain = gain;
+            changedSettings = true;
+        }
+
+        void Private_Impl_Still::setAwbBlueGain(float gain)
+        {
+            awbBlueGain = gain;
+            changedSettings = true;
+        }
 
 
         bool Private_Impl_Still::getBurstMode()
@@ -1295,6 +1325,16 @@ namespace raspicam
         float Private_Impl_Still::getDigitalGain()
         {
             return digitalGain;
+        }
+
+        float Private_Impl_Still::getAwbRedGain()
+        {
+            return awbRedGain;
+        }
+
+        float Private_Impl_Still::getAwbBlueGain()
+        {
+            return awbBlueGain;
         }
 
         void Private_Impl_Still::commitBrightness()

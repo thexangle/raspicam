@@ -100,6 +100,8 @@ namespace raspicam {
         void setVerticalFlip ( bool vFlip );
         void setAnalogGain( float gain );
         void setDigitalGain( float gain );
+        void setAwbRedGain( float gain );
+        void setAwbBlueGain( float gain );
 
         bool getBurstMode();
         unsigned int getWidth();
@@ -121,7 +123,8 @@ namespace raspicam {
         bool isVerticallyFlipped();
         float getDigitalGain();
         float getAnalogGain();
-
+        float getAwbRedGain();
+        float getAwbBlueGain();
     };
 }
 #endif

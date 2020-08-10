@@ -142,6 +142,15 @@ namespace raspicam {
         _impl->setDigitalGain ( gain );
     }
 
+    void RaspiCam_Still::setAwbRedGain ( float gain ) {
+        _impl->setAwbRedGain ( gain );
+    }
+    
+    void RaspiCam_Still::setAwbBlueGain ( float gain ) {
+        _impl->setAwbBlueGain ( gain );
+    }
+
+
     bool RaspiCam_Still::getBurstMode() {
         return _impl->getBurstMode();
     }
@@ -203,6 +212,13 @@ namespace raspicam {
 
     float RaspiCam_Still::getDigitalGain() {
         return _impl->getDigitalGain();
+    }
+    float RaspiCam_Still::getAwbRedGain() {
+        return _impl->getAwbRedGain();
+    }
+
+    float RaspiCam_Still::getAwbBlueGain() {
+        return _impl->getAwbBlueGain();
     }
 }
 

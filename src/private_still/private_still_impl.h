@@ -91,6 +91,8 @@ namespace raspicam {
             bool verticalFlip;
             float analogGain;
             float digitalGain;
+            float awbRedGain;
+            float awbBlueGain;
 
             MMAL_FOURCC_T convertEncoding ( RASPICAM_ENCODING encoding );
             MMAL_PARAM_EXPOSUREMETERINGMODE_T convertMetering ( RASPICAM_METERING metering );
@@ -127,6 +129,8 @@ namespace raspicam {
             MMAL_STATUS_T connectPorts ( MMAL_PORT_T *output_port, MMAL_PORT_T *input_port, MMAL_CONNECTION_T **connection );
             void disconnectPorts();
 
+
+
 	    bool _isInitialized;
             public:
             const char * API_NAME;
@@ -147,6 +151,9 @@ namespace raspicam {
                 encoder_output_port = NULL;
 		_isInitialized=false;
             }
+                        //called by control callback
+            void updateSettings(MMAL_PARAMETER_CAMERA_SETTINGS_T* settings);
+            
             int initialize();
             int startCapture ( imageTakenCallback userCallback, unsigned char * preallocated_data, unsigned int offset, unsigned int length );
             void stopCapture(MMAL_PORT_T * port);
@@ -180,6 +187,8 @@ namespace raspicam {
             void setVerticalFlip ( bool vFlip );
             void setAnalogGain( float gain );
             void setDigitalGain( float gain );
+            void setAwbRedGain( float gain );
+            void setAwbBlueGain( float gain );
 
             bool getBurstMode();
             unsigned int getWidth();
@@ -201,6 +210,8 @@ namespace raspicam {
             bool isVerticallyFlipped();
             float getDigitalGain();
             float getAnalogGain();
+            float getAwbRedGain();
+            float getAwbBlueGain();
 
 
             //Returns an id of the camera. We assume the camera id is the one of the raspberry
