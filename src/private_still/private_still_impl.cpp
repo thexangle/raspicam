@@ -217,6 +217,8 @@ namespace raspicam
             verticalFlip = false;
             analogGain = 0.0;
             digitalGain = 0.0;
+            awbBlueGain = 0.0;
+            awbRedGain = 0.0;
             //roi.x = params->roi.y = 0.0;
             //roi.w = params->roi.h = 1.0;
         }
@@ -239,11 +241,13 @@ namespace raspicam
             commitExposure();
             commitMetering();
             commitAWB();
+            commitAwbGains();
             commitShutterSpeed();
             commitImageEffect();
             commitRotation();
             commitFlips();
             //commitGains();
+           
             // Set Video Stabilization
             if (mmal_port_parameter_set_boolean(camera->control, MMAL_PARAMETER_VIDEO_STABILISATION, 0) != MMAL_SUCCESS)
                 cout << API_NAME << ": Failed to set video stabilization parameter.\n";
@@ -283,7 +287,7 @@ namespace raspicam
                 // vcos_log_error("No camera settings events");
             }
 
-            mmal_port_parameter_set_boolean(camera->control, MMAL_PARAMETER_CAPTURE_STATS_PASS, 1);
+            //mmal_port_parameter_set_boolean(camera->control, MMAL_PARAMETER_CAPTURE_STATS_PASS, 1);
 
             changedSettings = false;
         }
@@ -1511,6 +1515,28 @@ namespace raspicam
             if (status != MMAL_SUCCESS)
             {
                 cout << API_NAME << ": Failed to set digital gain.\n";
+            }
+        }
+
+        void Private_Impl_Still::commitAwbGains(){ 
+            //ignore if one of the gain is auto
+            //cout << API_NAME << ": setting awb gains " << awbRedGain <<","<< awbBlueGain << "\n";
+            if(awbBlueGain*awbRedGain == 0.0){
+                return;
+            }
+
+
+            MMAL_PARAMETER_AWB_GAINS_T param = {{MMAL_PARAMETER_CUSTOM_AWB_GAINS,sizeof(param)}, {0,0}, {0,0}};
+
+            if (!camera)
+                return ;
+
+            cout << API_NAME << ": setting awb gains " << awbRedGain <<","<< awbBlueGain << "\n";
+            param.r_gain.num = (unsigned int)(awbRedGain * 65536);
+            param.b_gain.num = (unsigned int)(awbBlueGain * 65536);
+            param.r_gain.den = param.b_gain.den = 65536;
+            if(mmal_port_parameter_set(camera->control, &param.hdr) != MMAL_SUCCESS){
+                 cout << API_NAME << ": Failed to set custom awb gains.\n";
             }
         }
 

@@ -114,6 +114,7 @@ namespace raspicam {
             void commitFlips();
             void commitResolution();
             void commitGains();
+            void commitAwbGains();
             int startCapture();
             int startPreviewCapture();
             int createCamera();
