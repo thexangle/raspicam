@@ -247,7 +247,11 @@ namespace raspicam
             commitRotation();
             commitFlips();
             //commitGains();
-           
+
+            MMAL_PARAMETER_FLASH_T param = {{MMAL_PARAMETER_FLASH, sizeof(param)}, MMAL_PARAM_FLASH_ON};
+            if (mmal_port_parameter_set(camera->control, &param.hdr) != MMAL_SUCCESS)
+                cout << API_NAME << ": Failed to set FLASH MODE parameter.\n";
+
             // Set Video Stabilization
             if (mmal_port_parameter_set_boolean(camera->control, MMAL_PARAMETER_VIDEO_STABILISATION, 0) != MMAL_SUCCESS)
                 cout << API_NAME << ": Failed to set video stabilization parameter.\n";
