@@ -220,6 +220,10 @@ namespace raspicam {
     float RaspiCam_Still::getAwbBlueGain() {
         return _impl->getAwbBlueGain();
     }
+
+    void RaspiCam_Still::setControlCallback(ControlCallback* callback){
+        _impl->setControlCallback(callback);
+    }
 }
 
 
