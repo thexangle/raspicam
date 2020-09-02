@@ -40,6 +40,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace raspicam {
 
+
+    class ControlCallback{ 
+        public: 
+        virtual void CameraSettingChanged() = 0;
+        virtual void CaptureRequested() = 0;
+        virtual void CaptureStarted() = 0;
+        virtual void CaptureEnded() = 0;
+    };
+
     /**Image formats
      */
     enum RASPICAM_FORMAT{

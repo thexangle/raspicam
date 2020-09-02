@@ -41,6 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 namespace raspicam {
 
+
     namespace _private{
         class Private_Impl_Still;
     };
@@ -110,6 +111,7 @@ namespace raspicam {
         unsigned int getRotation();
         unsigned int getQuality();
         unsigned int getShutterSpeed();
+        unsigned int getMeasuredShutterSpeed(); //from control callback != target shutter speed
         int getISO();
         int getSharpness();
         int getContrast();
@@ -125,6 +127,9 @@ namespace raspicam {
         float getAnalogGain();
         float getAwbRedGain();
         float getAwbBlueGain();
+
+        void setControlCallback(ControlCallback* callback);
+
     };
 }
 #endif

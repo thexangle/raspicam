@@ -172,6 +172,9 @@ namespace raspicam {
     unsigned int RaspiCam_Still::getShutterSpeed() {
         return _impl->getShutterSpeed();
     }
+    unsigned int RaspiCam_Still::getMeasuredShutterSpeed() {
+        return _impl->getMeasuredShutterSpeed();
+    }
     int RaspiCam_Still::getISO() {
         return _impl->getISO();
     }
@@ -219,6 +222,10 @@ namespace raspicam {
 
     float RaspiCam_Still::getAwbBlueGain() {
         return _impl->getAwbBlueGain();
+    }
+
+    void RaspiCam_Still::setControlCallback(ControlCallback* callback){
+        _impl->setControlCallback(callback);
     }
 }
 
