@@ -111,6 +111,7 @@ namespace raspicam {
         unsigned int getRotation();
         unsigned int getQuality();
         unsigned int getShutterSpeed();
+        unsigned int getMeasuredShutterSpeed(); //from control callback != target shutter speed
         int getISO();
         int getSharpness();
         int getContrast();

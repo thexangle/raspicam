@@ -79,6 +79,7 @@ namespace raspicam
          unsigned int brightness;    // 0 to 100
          unsigned int quality;       // 0 to 100
          unsigned int shutter_speed; //in microseconds
+         unsigned int measured_shutter_speed; //in microseconds
          bool burst_mode;
          int iso;
          int sharpness;  // -100 to 100
@@ -187,6 +188,7 @@ namespace raspicam
          void setBrightness(unsigned int brightness);
          void setQuality(unsigned int quality);
          void setShutterSpeed(unsigned int ss);
+         void setMeasuredShutterSpeed(unsigned int ss);
          void setRotation(int rotation);
          void setISO(int iso);
          void setSharpness(int sharpness);
@@ -212,6 +214,7 @@ namespace raspicam
          unsigned int getRotation();
          unsigned int getQuality();
          unsigned int getShutterSpeed();
+         unsigned int getMeasuredShutterSpeed();
          int getISO();
          int getSharpness();
          int getContrast();
