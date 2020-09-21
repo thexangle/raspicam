@@ -127,6 +127,8 @@ namespace raspicam {
         float getAnalogGain();
         float getAwbRedGain();
         float getAwbBlueGain();
+        float getMeasuredAwbRedGain();
+        float getMeasuredAwbBlueGain();
 
         void setControlCallback(ControlCallback* callback);
 

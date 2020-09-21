@@ -98,6 +98,8 @@ namespace raspicam
          float digitalGain;
          float awbRedGain;
          float awbBlueGain;
+         float measured_awbRedGain;
+         float measured_awbBlueGain;
 
          ControlCallback *userControlCallback;
 
@@ -205,6 +207,8 @@ namespace raspicam
          void setDigitalGain(float gain);
          void setAwbRedGain(float gain);
          void setAwbBlueGain(float gain);
+         void setMeasuredAwbRedGain(float gain);
+         void setMeasuredAwbBlueGain(float gain);
          void setControlCallback(ControlCallback *callback);
 
          bool getBurstMode();
@@ -215,6 +219,7 @@ namespace raspicam
          unsigned int getQuality();
          unsigned int getShutterSpeed();
          unsigned int getMeasuredShutterSpeed();
+         
          int getISO();
          int getSharpness();
          int getContrast();
@@ -230,6 +235,8 @@ namespace raspicam
          float getAnalogGain();
          float getAwbRedGain();
          float getAwbBlueGain();
+         float getMeasuredAwbRedGain();
+         float getMeasuredAwbBlueGain();
 
          ControlCallback *getControlCallback();
 

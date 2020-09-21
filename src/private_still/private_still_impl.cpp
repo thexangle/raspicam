@@ -210,8 +210,8 @@ namespace raspicam
                 measured_shutter_speed = settings->exposure;
                 analogGain = (float)settings->analog_gain.num / (float)(settings->analog_gain.den ? settings->analog_gain.den : 1.0f);
                 digitalGain = (float)settings->digital_gain.num / (float)(settings->digital_gain.den ? settings->digital_gain.den : 1.0f);
-                awbRedGain = (float)settings->awb_red_gain.num / (float)(settings->awb_red_gain.den ? settings->awb_red_gain.den : 1.0f);
-                awbBlueGain = (float)settings->awb_blue_gain.num / (float)(settings->awb_blue_gain.den ? settings->awb_blue_gain.den : 1.0f);
+                measured_awbRedGain = (float)settings->awb_red_gain.num / (float)(settings->awb_red_gain.den ? settings->awb_red_gain.den : 1.0f);
+                measured_awbBlueGain = (float)settings->awb_blue_gain.num / (float)(settings->awb_blue_gain.den ? settings->awb_blue_gain.den : 1.0f);
             }
         }
 
@@ -249,6 +249,8 @@ namespace raspicam
             digitalGain = 0.0;
             awbBlueGain = 0.0;
             awbRedGain = 0.0;
+            measured_awbBlueGain = 0.0;
+            measured_awbRedGain = 0.0;
             userControlCallback = NULL;
             //roi.x = params->roi.y = 0.0;
             //roi.w = params->roi.h = 1.0;
@@ -278,7 +280,7 @@ namespace raspicam
             commitImageEffect();
             commitRotation();
             commitFlips();
-            //commitGains();
+            commitGains();
 
             if (burst_mode)
             {
@@ -290,9 +292,9 @@ namespace raspicam
             }
 
             cout << API_NAME << ": setting FLASH MODE parameter.\n";
-            MMAL_PARAMETER_FLASH_T param = {{MMAL_PARAMETER_FLASH, sizeof(param)}, MMAL_PARAM_FLASH_ON};
-            if (mmal_port_parameter_set(camera->control, &param.hdr) != MMAL_SUCCESS)
-                cout << API_NAME << ": Failed to set FLASH MODE parameter.\n";
+            // MMAL_PARAMETER_FLASH_T param = {{MMAL_PARAMETER_FLASH, sizeof(param)}, MMAL_PARAM_FLASH_ON};
+            // if (mmal_port_parameter_set(camera->control, &param.hdr) != MMAL_SUCCESS)
+            //     cout << API_NAME << ": Failed to set FLASH MODE parameter.\n";
 
             // Set Video Stabilization
             if (mmal_port_parameter_set_boolean(camera->control, MMAL_PARAMETER_VIDEO_STABILISATION, 0) != MMAL_SUCCESS)
@@ -1364,6 +1366,16 @@ namespace raspicam
             changedSettings = true;
         }
 
+        void Private_Impl_Still::setMeasuredAwbRedGain(float gain)
+        {
+            measured_awbRedGain = gain;
+        }
+
+        void Private_Impl_Still::setMeasuredAwbBlueGain(float gain)
+        {
+            measured_awbBlueGain = gain;
+        }
+
         bool Private_Impl_Still::getBurstMode()
         {
             return burst_mode;
@@ -1477,6 +1489,16 @@ namespace raspicam
         float Private_Impl_Still::getAwbBlueGain()
         {
             return awbBlueGain;
+        }
+
+          float Private_Impl_Still::getMeasuredAwbRedGain()
+        {
+            return measured_awbRedGain;
+        }
+
+        float Private_Impl_Still::getMeasuredAwbBlueGain()
+        {
+            return measured_awbBlueGain;
         }
 
         void Private_Impl_Still::commitBrightness()
