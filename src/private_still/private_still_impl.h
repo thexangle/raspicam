@@ -127,7 +127,7 @@ namespace raspicam
          int startCapture();
          int startPreviewCapture();
          int createCamera();
-         int createPreview();
+         int createPreview(bool noPreview = true);
          int createEncoders();
 
          int disableCamera();

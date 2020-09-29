@@ -588,58 +588,72 @@ namespace raspicam
             return this->userControlCallback;
         }
 
-        int Private_Impl_Still::createPreview()
+        int Private_Impl_Still::createPreview(bool noPreview)
         {
             MMAL_COMPONENT_T *preview = 0;
             MMAL_PORT_T *preview_port = NULL;
             MMAL_STATUS_T status;
-
-            status = mmal_component_create(MMAL_COMPONENT_DEFAULT_VIDEO_RENDERER,
-                                           &preview);
-
-            if (status != MMAL_SUCCESS)
+            if (noPreview)
             {
-                cout << API_NAME << "Unable to create preview component" << endl;
-                goto error;
-            }
+                // No preview required, so create a null sink component to take its place
+                status = mmal_component_create("vc.null_sink", &preview);
 
-            if (!preview->input_num)
+                if (status != MMAL_SUCCESS)
+                {
+                    cout << API_NAME << "Unable to create null sink component" << std::endl;
+                    goto error;
+                }
+            }
+            else
             {
-                status = MMAL_ENOSYS;
-                cout << API_NAME << "No input ports found on component" << endl;
-                goto error;
+
+
+                status = mmal_component_create(MMAL_COMPONENT_DEFAULT_VIDEO_RENDERER,
+                                            &preview);
+
+                if (status != MMAL_SUCCESS)
+                {
+                    cout << API_NAME << "Unable to create preview component" << endl;
+                    goto error;
+                }
+
+                if (!preview->input_num)
+                {
+                    status = MMAL_ENOSYS;
+                    cout << API_NAME << "No input ports found on component" << endl;
+                    goto error;
+                }
+
+                preview_port = preview->input[0];
+
+                MMAL_DISPLAYREGION_T param;
+                param.hdr.id = MMAL_PARAMETER_DISPLAYREGION;
+                param.hdr.size = sizeof(MMAL_DISPLAYREGION_T);
+
+                param.set = MMAL_DISPLAY_SET_LAYER;
+                param.layer = 2; // PREVIEW_LAYER;
+
+                param.set |= MMAL_DISPLAY_SET_ALPHA;
+                param.alpha = 255;
+
+                MMAL_RECT_T previewWindow;
+                previewWindow.x = 0;
+                previewWindow.y = 0;
+                previewWindow.width = 1024;
+                previewWindow.height = 768;
+
+                param.set |= (MMAL_DISPLAY_SET_DEST_RECT | MMAL_DISPLAY_SET_FULLSCREEN);
+                param.fullscreen = 0;
+                param.dest_rect = previewWindow;
+
+                status = mmal_port_parameter_set(preview_port, &param.hdr);
+
+                if (status != MMAL_SUCCESS && status != MMAL_ENOSYS)
+                {
+                    cout << API_NAME << "unable to set preview port parameters : " << status << endl;
+                    goto error;
+                }
             }
-
-            preview_port = preview->input[0];
-
-            MMAL_DISPLAYREGION_T param;
-            param.hdr.id = MMAL_PARAMETER_DISPLAYREGION;
-            param.hdr.size = sizeof(MMAL_DISPLAYREGION_T);
-
-            param.set = MMAL_DISPLAY_SET_LAYER;
-            param.layer = 2; // PREVIEW_LAYER;
-
-            param.set |= MMAL_DISPLAY_SET_ALPHA;
-            param.alpha = 255;
-
-            MMAL_RECT_T previewWindow;
-            previewWindow.x = 0;
-            previewWindow.y = 0;
-            previewWindow.width = 1024;
-            previewWindow.height = 768;
-
-            param.set |= (MMAL_DISPLAY_SET_DEST_RECT | MMAL_DISPLAY_SET_FULLSCREEN);
-            param.fullscreen = 0;
-            param.dest_rect = previewWindow;
-
-            status = mmal_port_parameter_set(preview_port, &param.hdr);
-
-            if (status != MMAL_SUCCESS && status != MMAL_ENOSYS)
-            {
-                cout << API_NAME << "unable to set preview port parameters : " << status << endl;
-                goto error;
-            }
-
             /* Enable component */
             status = mmal_component_enable(preview);
 
